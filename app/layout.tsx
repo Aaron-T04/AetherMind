@@ -11,7 +11,9 @@ import Scrollbar from "@/components/ui/scrollbar";
 import { BigIntProvider } from "@/components/providers/BigIntProvider";
 import "styles/main.css";
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+// Initialize Convex client - use fallback URL during build if not set
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || 'https://placeholder.convex.cloud';
+const convex = new ConvexReactClient(convexUrl);
 
 const robotoMono = Roboto_Mono({
   subsets: ["latin"],
