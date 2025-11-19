@@ -153,7 +153,7 @@ export default function NodePanel({
                       serverUrlNormalized.includes(toolUrlNormalized)));
 
                   const nameMatch = server.name?.toLowerCase() === tool.name?.toLowerCase() ||
-                    server.label?.toLowerCase() === tool.label?.toLowerCase();
+                    server.name?.toLowerCase() === tool.label?.toLowerCase();
 
                   return urlMatch || nameMatch;
                 }
@@ -318,7 +318,7 @@ export default function NodePanel({
                 id: server._id,
                 name: server.name,
                 url: server.url,
-                label: server.label || server.name,
+                label: server.name, // Use name as label (label property doesn't exist on MCP server type)
                 authType: server.authType,
               };
             }

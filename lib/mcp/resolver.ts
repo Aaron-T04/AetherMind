@@ -45,15 +45,17 @@ export async function resolveMCPServers(serverIds: string[]): Promise<any[]> {
     });
 
     // Transform to the format expected by executors
-    return servers.filter(Boolean).map(server => ({
-      name: server.name,
-      url: server.url,
-      description: server.description,
-      authType: server.authType,
-      accessToken: server.accessToken,
-      availableTools: server.tools || [],
-      headers: server.headers,
-    }));
+    return servers
+      .filter((server): server is NonNullable<typeof server> => server !== null && server !== undefined)
+      .map(server => ({
+        name: server.name,
+        url: server.url,
+        description: server.description,
+        authType: server.authType,
+        accessToken: server.accessToken,
+        availableTools: server.tools || [],
+        headers: server.headers,
+      }));
   } catch (error) {
     console.error('Error resolving MCP servers:', error);
     return [];

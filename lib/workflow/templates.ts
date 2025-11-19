@@ -140,7 +140,7 @@ Keep it professional and concise.`,
           nodeType: 'transform',
           label: 'Format as JSON',
           nodeName: 'Format as JSON',
-          transformCode: `// Transform summary into structured JSON for auditability
+          transformScript: `// Transform summary into structured JSON for auditability
 // lastOutput contains the summary text from AI/ML API
 let summaryText = '';
 if (typeof lastOutput === 'string') {
