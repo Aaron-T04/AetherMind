@@ -90,11 +90,11 @@ function StyleGuidePageContent() {
   return (
     <HeaderProvider>
       {showWorkflowBuilder ? (
-        <WorkflowBuilder
-          onBack={handleReset}
-          initialWorkflowId={loadWorkflowId}
-          initialTemplateId={loadTemplateId}
-        />
+          <WorkflowBuilder
+            onBack={handleReset}
+            initialWorkflowId={loadWorkflowId}
+            initialTemplateId={loadTemplateId}
+          />
       ) : (
       <div className="min-h-screen bg-background-base">
         {/* Header/Navigation Section */}
@@ -167,30 +167,30 @@ function StyleGuidePageContent() {
                   </p>
                 </motion.div>
               ) : (
-                <motion.div
-                  key="step2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="relative container px-16"
-                >
-                  <Step2Placeholder
-                    onReset={handleReset}
-                    onCreateWorkflow={handleCreateWorkflow}
-                    onLoadWorkflow={(id) => {
-                      setLoadWorkflowId(id);
-                      setLoadTemplateId(null);
-                      setShowWorkflowBuilder(true);
-                      router.push(`/?workflow=${id}`);
-                    }}
-                    onLoadTemplate={(templateId) => {
-                      setLoadTemplateId(templateId);
-                      setLoadWorkflowId(null);
-                      setShowWorkflowBuilder(true);
-                      router.push(`/?template=${templateId}`);
-                    }}
-                  />
-                </motion.div>
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="relative container px-16"
+                  >
+                    <Step2Placeholder
+                      onReset={handleReset}
+                      onCreateWorkflow={handleCreateWorkflow}
+                      onLoadWorkflow={(id) => {
+                        setLoadWorkflowId(id);
+                        setLoadTemplateId(null);
+                        setShowWorkflowBuilder(true);
+                        router.push(`/?workflow=${id}`);
+                      }}
+                      onLoadTemplate={(templateId) => {
+                        setLoadTemplateId(templateId);
+                        setLoadWorkflowId(null);
+                        setShowWorkflowBuilder(true);
+                        router.push(`/?template=${templateId}`);
+                      }}
+                    />
+                  </motion.div>
               )}
             </AnimatePresence>
           </div>
@@ -203,12 +203,12 @@ function StyleGuidePageContent() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <button
-                onClick={handleSubmit}
+                <button
+                  onClick={handleSubmit}
                 className="bg-aethermind-blue hover:opacity-90 text-white font-medium px-32 py-12 rounded-10 transition-all active:scale-[0.98] text-body-medium shadow-md cursor-pointer"
-              >
-                Start building
-              </button>
+                >
+                  Start building
+                </button>
             </motion.div>
           )}
         </section>

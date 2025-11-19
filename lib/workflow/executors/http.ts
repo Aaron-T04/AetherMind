@@ -29,17 +29,59 @@ export async function executeHTTPNode(
 
     // Add authentication
     if (nodeData.httpAuthType === 'bearer' && nodeData.httpAuthToken) {
-      headers['Authorization'] = `Bearer ${nodeData.httpAuthToken}`;
+      let authToken = substituteVariables(nodeData.httpAuthToken, state);
+      // Handle environment variable substitution (e.g., ${FIRECRAWL_API_KEY})
+      if (authToken.startsWith('${') && authToken.endsWith('}')) {
+        const envVar = authToken.slice(2, -1);
+        authToken = process.env[envVar] || authToken;
+      }
+      headers['Authorization'] = `Bearer ${authToken}`;
     } else if (nodeData.httpAuthType === 'api-key' && nodeData.httpAuthToken) {
-      headers['X-API-Key'] = nodeData.httpAuthToken;
+      let authToken = substituteVariables(nodeData.httpAuthToken, state);
+      // Handle environment variable substitution
+      if (authToken.startsWith('${') && authToken.endsWith('}')) {
+        const envVar = authToken.slice(2, -1);
+        authToken = process.env[envVar] || authToken;
+      }
+      headers['X-API-Key'] = authToken;
     } else if (nodeData.httpAuthType === 'basic' && nodeData.httpAuthToken) {
-      headers['Authorization'] = `Basic ${btoa(nodeData.httpAuthToken)}`;
+      let authToken = substituteVariables(nodeData.httpAuthToken, state);
+      // Handle environment variable substitution
+      if (authToken.startsWith('${') && authToken.endsWith('}')) {
+        const envVar = authToken.slice(2, -1);
+        authToken = process.env[envVar] || authToken;
+      }
+      headers['Authorization'] = `Basic ${btoa(authToken)}`;
     }
 
     // Build request body
     let body: string | undefined = undefined;
     if ((method === 'POST' || method === 'PUT' || method === 'PATCH') && nodeData.httpBody) {
-      body = substituteVariables(nodeData.httpBody, state);
+      let bodyStr = substituteVariables(nodeData.httpBody, state);
+      // If body is a JSON string, try to parse and re-stringify to handle nested variable substitution
+      try {
+        const parsed = JSON.parse(bodyStr);
+        // Recursively substitute variables in the parsed object
+        const substituteInObject = (obj: any): any => {
+          if (typeof obj === 'string') {
+            return substituteVariables(obj, state);
+          } else if (Array.isArray(obj)) {
+            return obj.map(substituteInObject);
+          } else if (obj && typeof obj === 'object') {
+            const result: any = {};
+            for (const [key, value] of Object.entries(obj)) {
+              result[substituteVariables(key, state)] = substituteInObject(value);
+            }
+            return result;
+          }
+          return obj;
+        };
+        const substituted = substituteInObject(parsed);
+        body = JSON.stringify(substituted);
+      } catch (e) {
+        // Not JSON, use as-is
+        body = bodyStr;
+      }
     }
 
     console.log('HTTP Request:', { method, url, headers, body });

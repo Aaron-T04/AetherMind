@@ -84,21 +84,21 @@
 ### Installation
 
 1. **Clone the repository:**
-   ```bash
+```bash
    git clone https://github.com/Aaron-T04/AetherMind.git
    cd AetherMind
-   npm install
-   ```
+npm install
+```
 
 2. **Set up Convex (Database):**
-   ```bash
-   npm install -g convex
-   npx convex dev
-   ```
+```bash
+npm install -g convex
+npx convex dev
+```
    This will generate `NEXT_PUBLIC_CONVEX_URL` in your `.env.local`
 
 3. **Configure environment variables:**
-   ```bash
+```bash
    cp env.local.template .env.local
    ```
    
@@ -107,16 +107,16 @@
    # Required
    NEXT_PUBLIC_CONVEX_URL=<from-convex>
    FIRECRAWL_API_KEY=fc-...
-   
+
    # Hackathon Required
    GEMINI_API_KEY=your-gemini-key
    AIMLAPI_API_KEY=your-aimlapi-key
    ```
 
 4. **Run the application:**
-   ```bash
+```bash
    # Terminal 1: Convex
-   npx convex dev
+npx convex dev
    
    # Terminal 2: Next.js
    npm run dev
@@ -172,7 +172,7 @@ Start → Firecrawl Search → Gemini Analysis → AI/ML API Summary → Transfo
 API keys can be added in two ways:
 
 1. **Environment Variables** (`.env.local`):
-   ```bash
+```bash
    GEMINI_API_KEY=your-key
    AIMLAPI_API_KEY=your-key
    FIRECRAWL_API_KEY=your-key

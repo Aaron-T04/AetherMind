@@ -72,6 +72,9 @@ export const saveWorkflow = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
+    
+    // HACKATHON DEMO MODE: Use demo user ID if no identity
+    const userId = identity?.subject || 'demo-user-hackathon-2025';
 
     // Check if workflow with this customId already exists (if customId provided)
     if (args.customId) {
@@ -81,8 +84,8 @@ export const saveWorkflow = mutation({
         .first();
 
       if (existing) {
-        // Check ownership if user is authenticated
-        if (identity && existing.userId && existing.userId !== identity.subject) {
+        // Check ownership if user is authenticated (skip in demo mode)
+        if (identity && existing.userId && existing.userId !== identity.subject && existing.userId !== 'demo-user-hackathon-2025') {
           throw new Error("Unauthorized: workflow belongs to another user");
         }
 
@@ -98,7 +101,7 @@ export const saveWorkflow = mutation({
     // Create new workflow with user ownership
     const newId = await ctx.db.insert("workflows", {
       ...args,
-      userId: identity?.subject, // Add user ownership if authenticated
+      userId: userId, // Use demo user ID in demo mode
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

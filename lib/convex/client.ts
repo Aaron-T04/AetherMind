@@ -52,6 +52,15 @@ export async function getAuthenticatedConvexClient(): Promise<ConvexHttpClient> 
 
   const client = new ConvexHttpClient(url);
 
+  // HACKATHON DEMO MODE: Skip Clerk auth in demo mode
+  const DEMO_MODE = process.env.DEMO_MODE !== 'false';
+  
+  if (DEMO_MODE) {
+    // In demo mode, use unauthenticated client
+    // Convex queries will use demo user ID from the query itself
+    return client;
+  }
+
   try {
     // Get Clerk auth token
     const { getToken } = await auth();

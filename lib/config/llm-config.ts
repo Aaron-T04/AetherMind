@@ -122,7 +122,7 @@ export const llmProviders: LLMProvider[] = [
     models: [
       {
         id: 'gemini-1.5-flash',
-        name: 'Gemini 1.5 Flash',
+        name: 'Gemini 2.5 Flash',
         provider: 'gemini',
         contextWindow: 1000000,
         inputCostPer1M: 0.075,
@@ -134,7 +134,7 @@ export const llmProviders: LLMProvider[] = [
       },
       {
         id: 'gemini-1.5-pro',
-        name: 'Gemini 1.5 Pro',
+        name: 'Gemini 2.5 Flash (Preview)',
         provider: 'gemini',
         contextWindow: 2000000,
         inputCostPer1M: 1.25,
@@ -142,7 +142,7 @@ export const llmProviders: LLMProvider[] = [
         supportsJSON: true,
         supportsMCP: false,
         maxTokens: 8192,
-        description: 'Most capable Gemini model with extended context',
+        description: 'Latest Gemini Flash preview with extended capabilities',
       },
     ],
   },
@@ -154,7 +154,7 @@ export const llmProviders: LLMProvider[] = [
     models: [
       {
         id: 'llama-3.1-70b',
-        name: 'Llama 3.1 70B',
+        name: 'Llama 3.1 70B Turbo',
         provider: 'aimlapi',
         contextWindow: 128000,
         inputCostPer1M: 0.20,
@@ -166,7 +166,7 @@ export const llmProviders: LLMProvider[] = [
       },
       {
         id: 'llama-3.1-8b',
-        name: 'Llama 3.1 8B',
+        name: 'Llama 3.1 8B Turbo',
         provider: 'aimlapi',
         contextWindow: 128000,
         inputCostPer1M: 0.05,

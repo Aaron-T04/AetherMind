@@ -13,7 +13,7 @@ const templates: Record<string, Workflow> = {
   'aethermind-research-analysis-summary': {
     id: 'aethermind-research-analysis-summary',
     name: 'AetherMind: Research → Analysis → Summary',
-    description: 'Autonomous workflow: Search web, analyze findings with Gemini, summarize with AI/ML API, output structured JSON',
+    description: 'Autonomous workflow: Research web data, analyze findings with Gemini, summarize with AI/ML API, output structured JSON',
     category: 'AetherMind',
     tags: ['aethermind', 'research', 'analysis', 'gemini', 'hackathon'],
     difficulty: 'intermediate',
@@ -48,7 +48,7 @@ const templates: Record<string, Workflow> = {
           noteText: `Research → Analysis → Summary
 
 Demonstrates:
-1. Firecrawl Search (Research)
+1. Web Research (Data Collection)
 2. Gemini Analysis (Reasoning)
 3. AI/ML API Summary (Sub-agent)
 4. Structured JSON Output
@@ -75,8 +75,8 @@ Powered by Gemini 1.5 Flash + AI/ML API`,
               authType: 'Access token / API key',
             },
           ],
-          searchQuery: '{{input.research_topic}}',
-          searchLimit: 5,
+          searchQuery: '{{input.research_topic}} news trends 2025',
+          searchLimit: 10,
         },
       },
       {
@@ -94,11 +94,15 @@ Research Topic: {{input.research_topic}}
 Search Results:
 {{lastOutput}}
 
+IMPORTANT: Focus on the actual research topic. If search results are not directly relevant, note this and provide analysis based on what IS available. Filter out irrelevant results (like generic "how to write research papers" guides) and focus on substantive content related to the topic.
+
 Please provide:
-1. Key findings (3-5 main points)
-2. Trends and patterns identified
-3. Important statistics or data points
-4. Expert analysis and implications
+1. Key findings (3-5 main points) - only from relevant sources
+2. Trends and patterns identified - specific to the research topic
+3. Important statistics or data points - actual numbers, dates, facts
+4. Expert analysis and implications - what this means for the field
+
+If search results are not relevant, clearly state this and suggest what better search terms might be needed.
 
 Format your response as structured analysis ready for summarization.`,
           model: 'gemini/gemini-1.5-flash',
@@ -137,20 +141,47 @@ Keep it professional and concise.`,
           label: 'Format as JSON',
           nodeName: 'Format as JSON',
           transformCode: `// Transform summary into structured JSON for auditability
-const summary = {{lastOutput}};
+// lastOutput contains the summary text from AI/ML API
+let summaryText = '';
+if (typeof lastOutput === 'string') {
+  summaryText = lastOutput;
+} else if (lastOutput && typeof lastOutput === 'object') {
+  summaryText = lastOutput.summary || lastOutput.text || JSON.stringify(lastOutput);
+} else {
+  summaryText = String(lastOutput || '');
+}
 
-return {
-  researchTopic: "{{input.research_topic}}",
+// Get research topic from input - try multiple paths
+let researchTopic = 'Unknown';
+if (state && state.variables) {
+  if (state.variables.input) {
+    if (typeof state.variables.input === 'object') {
+      researchTopic = state.variables.input.research_topic || 
+                      state.variables.input.input?.research_topic ||
+                      state.variables.input.query ||
+                      'Unknown';
+    } else if (typeof state.variables.input === 'string') {
+      researchTopic = state.variables.input;
+    }
+  }
+}
+
+// Return structured JSON object
+const result = {
+  researchTopic: researchTopic,
   timestamp: new Date().toISOString(),
-  summary: summary,
+  summary: summaryText,
   workflow: "AetherMind Research → Analysis → Summary",
   metadata: {
-    researchAgent: "Firecrawl",
+    researchAgent: "Web Research",
     analysisAgent: "Gemini 1.5 Flash",
     summaryAgent: "Llama 3.1 70B (AI/ML API)",
     executionTime: new Date().toISOString()
   }
-};`,
+};
+
+// IMPORTANT: Return the JSON object
+return result;`,
         },
       },
       {
@@ -308,7 +339,7 @@ Example for Tesla:
   "company": "Tesla",
   "ticker": "TSLA"
 }`,
-          model: 'groq/openai/gpt-oss-120b',
+          model: 'gemini/gemini-1.5-flash',
           outputFormat: 'JSON',
           jsonOutputSchema: JSON.stringify({
             type: 'object',
@@ -322,38 +353,54 @@ Example for Tesla:
       },
       {
         id: 'research-yahoo',
-        type: 'agent',
+        type: 'mcp',
         position: { x: 1150, y: 250 },
         data: {
-          nodeType: 'agent',
+          nodeType: 'mcp',
           label: 'Research Yahoo Finance',
           nodeName: 'Research Yahoo Finance',
-          instructions: `Search Yahoo Finance for ticker {{lastOutput.ticker}} ({{lastOutput.company}}) and gather:
+          mcpAction: 'search',
+          outputField: 'results',
+          mcpServers: [
+            {
+              id: 'firecrawl',
+              name: 'Firecrawl',
+              label: 'firecrawl',
+              url: 'https://mcp.firecrawl.dev/{FIRECRAWL_API_KEY}/v2/mcp',
+              authType: 'Access token / API key',
+            },
+          ],
+          searchQuery: '{{lastOutput.ticker}} yahoo finance stock price',
+          searchLimit: 5,
+        },
+      },
+      {
+        id: 'analyze-yahoo-results',
+        type: 'agent',
+        position: { x: 1400, y: 250 },
+        data: {
+          nodeType: 'agent',
+          label: 'Analyze Results',
+          nodeName: 'Analyze Results',
+          instructions: `Analyze the Yahoo Finance search results for {{lastOutput.ticker}} ({{lastOutput.company}}) and extract:
 
 1. Current price
 2. Daily change ($ and %)
 3. Recent price movement trend (up/down/flat over last week)
 4. One key headline if available
 
-Use Firecrawl MCP to search and scrape Yahoo Finance.
+Search Results:
+{{lastOutput}}
 
 Format as a brief summary (3-4 sentences).`,
-          model: 'anthropic/claude-sonnet-4-20250514',
+          model: 'gemini/gemini-1.5-flash',
           outputFormat: 'Text',
-          mcpTools: [
-            {
-              name: 'Firecrawl',
-              url: 'https://mcp.firecrawl.dev/{FIRECRAWL_API_KEY}/v2/mcp',
-              authType: 'url',
-              label: 'Firecrawl',
-            }
-          ],
         },
       },
       {
         id: 'collect-result',
         type: 'transform',
-        position: { x: 1400, y: 250 },
+        position: { x: 1650, y: 250 },
         data: {
           nodeType: 'transform',
           label: 'Collect Result',
@@ -449,7 +496,7 @@ Format the report as:
 (Which company looks strongest/weakest and why - 2-3 sentences)
 
 Make it professional and well-formatted.`,
-          model: 'groq/openai/gpt-oss-120b',
+          model: 'aimlapi/llama-3.1-70b',
           outputFormat: 'Text',
           includeChatHistory: true,
         },
@@ -471,7 +518,8 @@ Make it professional and well-formatted.`,
       { id: 'e3', source: 'loop-companies', target: 'get-current-company' },
       { id: 'e4', source: 'get-current-company', target: 'get-ticker' },
       { id: 'e5', source: 'get-ticker', target: 'research-yahoo' },
-      { id: 'e6', source: 'research-yahoo', target: 'collect-result' },
+      { id: 'e5b', source: 'research-yahoo', target: 'analyze-yahoo-results' },
+      { id: 'e6', source: 'analyze-yahoo-results', target: 'collect-result' },
       { id: 'e7', source: 'collect-result', target: 'loop-companies' }, // Loop back
       { id: 'e8', source: 'loop-companies', target: 'prepare-summary-data', sourceHandle: 'break' },
       { id: 'e8b', source: 'prepare-summary-data', target: 'generate-summary' },
@@ -525,35 +573,50 @@ Simple 4-node workflow!`,
       },
       {
         id: 'research',
-        type: 'agent',
+        type: 'mcp',
         position: { x: 350, y: 250 },
         data: {
-          nodeType: 'agent',
+          nodeType: 'mcp',
           label: 'Research Stock',
           nodeName: 'Research Stock',
-          instructions: 'Search Yahoo Finance for ticker ' + '{{input.ticker}}' + ' and gather:\n- Current price\n- Daily change ($ and %)\n- Market cap\n- P/E ratio\n- 52-week high/low\n- Top 2 recent news headlines\n\nUse Firecrawl MCP to search and scrape the data.',
-          model: 'anthropic/claude-sonnet-4-20250514',
-          outputFormat: 'Text',
-          mcpTools: [
+          mcpAction: 'search',
+          outputField: 'results',
+          mcpServers: [
             {
+              id: 'firecrawl',
               name: 'Firecrawl',
+              label: 'firecrawl',
               url: 'https://mcp.firecrawl.dev/{FIRECRAWL_API_KEY}/v2/mcp',
-              authType: 'url',
-              label: 'Firecrawl',
-            }
+              authType: 'Access token / API key',
+            },
           ],
+          searchQuery: '{{input.ticker}} yahoo finance stock price',
+          searchLimit: 5,
+        },
+      },
+      {
+        id: 'analyze-research',
+        type: 'agent',
+        position: { x: 500, y: 250 },
+        data: {
+          nodeType: 'agent',
+          label: 'Analyze Research',
+          nodeName: 'Analyze Research',
+          instructions: 'Analyze the Yahoo Finance search results for ' + '{{input.ticker}}' + ' and extract:\n- Current price\n- Daily change ($ and %)\n- Market cap\n- P/E ratio\n- 52-week high/low\n- Top 2 recent news headlines\n\nSearch Results:\n{{lastOutput}}',
+          model: 'gemini/gemini-1.5-flash',
+          outputFormat: 'Text',
         },
       },
       {
         id: 'write-report',
         type: 'agent',
-        position: { x: 600, y: 250 },
+        position: { x: 650, y: 250 },
         data: {
           nodeType: 'agent',
           label: 'Write Report',
           nodeName: 'Write Report',
           instructions: 'Write a professional stock analysis report for ' + '{{input.ticker}}' + ' using this research:\n\n' + '{{lastOutput}}' + '\n\nInclude:\n- Executive Summary (3 sentences)\n- Key Metrics table\n- Performance Analysis\n- Recent News Summary\n- Investment Recommendation\n\nMake it professional and well-formatted.',
-          model: 'anthropic/claude-sonnet-4-20250514',
+          model: 'aimlapi/llama-3.1-70b',
           outputFormat: 'Text',
         },
       },
@@ -570,7 +633,8 @@ Simple 4-node workflow!`,
     ],
     edges: [
       { id: 'e1', source: 'start', target: 'research' },
-      { id: 'e2', source: 'research', target: 'write-report' },
+      { id: 'e1b', source: 'research', target: 'analyze-research' },
+      { id: 'e2', source: 'analyze-research', target: 'write-report' },
       { id: 'e3', source: 'write-report', target: 'end' },
     ],
     createdAt: new Date().toISOString(),
@@ -851,42 +915,57 @@ Great for: Shopping decisions, price research`,
       },
       {
         id: 'search-amazon',
-        type: 'agent',
+        type: 'mcp',
         position: { x: 350, y: 250 },
         data: {
+          nodeType: 'mcp',
+          label: 'Search Amazon',
+          nodeName: 'Search Amazon',
+          mcpAction: 'search',
+          outputField: 'results',
+          mcpServers: [
+            {
+              id: 'firecrawl',
+              name: 'Firecrawl',
+              label: 'firecrawl',
+              url: 'https://mcp.firecrawl.dev/{FIRECRAWL_API_KEY}/v2/mcp',
+              authType: 'Access token / API key',
+            },
+          ],
+          searchQuery: '{{input.product}} amazon',
+          searchLimit: 5,
+        },
+      },
+      {
+        id: 'extract-product-data',
+        type: 'agent',
+        position: { x: 500, y: 250 },
+        data: {
           nodeType: 'agent',
-          label: 'Search & Scrape Amazon',
-          nodeName: 'Search & Scrape Amazon',
-          instructions: `Search Amazon for: {{input.product}}
+          label: 'Extract Product Data',
+          nodeName: 'Extract Product Data',
+          instructions: `Analyze the Amazon search results for: {{input.product}}
 
-1. Use firecrawl_search to find the product on Amazon
-2. Identify the most relevant product listing
-3. Use firecrawl_scrape on the product page URL
-4. Extract key information:
-   - Product title
-   - Current price
-   - Rating (out of 5 stars)
-   - Number of reviews
-   - Key features/specs
-   - Top 3-5 customer review summaries
+Search Results:
+{{lastOutput}}
+
+Extract key information:
+- Product title
+- Current price
+- Rating (out of 5 stars)
+- Number of reviews
+- Key features/specs
+- Top 3-5 customer review summaries
 
 Return all extracted data in a clear format.`,
-          model: 'anthropic/claude-sonnet-4-20250514',
+          model: 'gemini/gemini-1.5-flash',
           outputFormat: 'Text',
-          mcpTools: [
-            {
-              name: 'Firecrawl',
-              url: 'https://mcp.firecrawl.dev/{FIRECRAWL_API_KEY}/v2/mcp',
-              authType: 'url',
-              label: 'Firecrawl',
-            }
-          ],
         },
       },
       {
         id: 'analyze-recommend',
         type: 'agent',
-        position: { x: 600, y: 250 },
+        position: { x: 650, y: 250 },
         data: {
           nodeType: 'agent',
           label: 'Analyze & Recommend',
@@ -916,7 +995,7 @@ Clear BUY or SKIP recommendation with reasoning (2-3 sentences).
 
 ## Best For
 Who would benefit most from this product?`,
-          model: 'anthropic/claude-sonnet-4-20250514',
+          model: 'aimlapi/llama-3.1-70b',
           outputFormat: 'Text',
         },
       },
@@ -933,7 +1012,8 @@ Who would benefit most from this product?`,
     ],
     edges: [
       { id: 'e1', source: 'start', target: 'search-amazon' },
-      { id: 'e2', source: 'search-amazon', target: 'analyze-recommend' },
+      { id: 'e1b', source: 'search-amazon', target: 'extract-product-data' },
+      { id: 'e2', source: 'extract-product-data', target: 'analyze-recommend' },
       { id: 'e3', source: 'analyze-recommend', target: 'end' },
     ],
     createdAt: new Date().toISOString(),
@@ -1440,13 +1520,23 @@ export function listTemplates(): Array<{
   difficulty?: string;
   estimatedTime?: string;
 }> {
-  return Object.values(templates).map(t => ({
-    id: t.id,
-    name: t.name,
-    description: t.description,
-    category: t.category,
-    tags: t.tags,
-    difficulty: t.difficulty,
-    estimatedTime: t.estimatedTime,
-  }));
+  // HACKATHON: Show only selected templates for demo
+  const allowedTemplateIds = [
+    'aethermind-research-analysis-summary', // AetherMind: Research → Analysis → Summary (Hackathon Default)
+    'multi-company-stock-analysis',      // Stock Analysis
+    'yahoo-finance-stock-report',        // Stock Report
+    'amazon-product-research',           // Amazon Product Research
+  ];
+  
+  return Object.values(templates)
+    .filter(t => allowedTemplateIds.includes(t.id))
+    .map(t => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      tags: t.tags,
+      difficulty: t.difficulty,
+      estimatedTime: t.estimatedTime,
+    }));
 }

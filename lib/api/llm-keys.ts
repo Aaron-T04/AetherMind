@@ -27,7 +27,7 @@ const getConvexClient = () => {
  * @returns The API key or null if not found
  */
 export async function getLLMApiKey(
-  provider: 'anthropic' | 'openai' | 'groq',
+  provider: 'anthropic' | 'openai' | 'groq' | 'gemini' | 'aimlapi',
   userId?: string
 ): Promise<string | null> {
   // First, try to get user-specific key if userId is provided
@@ -55,10 +55,12 @@ export async function getLLMApiKey(
   }
 
   // Fall back to environment variables
-  const envKeyMap = {
+  const envKeyMap: Record<string, string> = {
     anthropic: 'ANTHROPIC_API_KEY',
     openai: 'OPENAI_API_KEY',
     groq: 'GROQ_API_KEY',
+    gemini: 'GEMINI_API_KEY',
+    aimlapi: 'AIMLAPI_API_KEY',
   };
 
   const envKey = envKeyMap[provider];
@@ -75,7 +77,7 @@ export async function getLLMApiKey(
  * Check if a provider has an API key configured (either user or env)
  */
 export async function isProviderConfigured(
-  provider: 'anthropic' | 'openai' | 'groq',
+  provider: 'anthropic' | 'openai' | 'groq' | 'gemini' | 'aimlapi',
   userId?: string
 ): Promise<boolean> {
   const apiKey = await getLLMApiKey(provider, userId);
@@ -86,7 +88,7 @@ export async function isProviderConfigured(
  * Get all configured providers for a user
  */
 export async function getConfiguredProviders(userId?: string): Promise<string[]> {
-  const providers: ('anthropic' | 'openai' | 'groq')[] = ['anthropic', 'openai', 'groq'];
+  const providers: ('anthropic' | 'openai' | 'groq' | 'gemini' | 'aimlapi')[] = ['anthropic', 'openai', 'groq', 'gemini', 'aimlapi'];
   const configured: string[] = [];
 
   for (const provider of providers) {
@@ -103,7 +105,7 @@ export async function getConfiguredProviders(userId?: string): Promise<string[]>
  * This is a helper function that can be used by the execute routes
  */
 export async function initializeLLMClient(
-  provider: 'anthropic' | 'openai' | 'groq',
+  provider: 'anthropic' | 'openai' | 'groq' | 'gemini' | 'aimlapi',
   userId?: string
 ): Promise<{ apiKey: string; provider: string }> {
   const apiKey = await getLLMApiKey(provider, userId);
@@ -113,7 +115,9 @@ export async function initializeLLMClient(
       `No API key found for ${provider}. Please configure your API key in Settings or set the ${
         provider === 'anthropic' ? 'ANTHROPIC_API_KEY' :
         provider === 'openai' ? 'OPENAI_API_KEY' :
-        'GROQ_API_KEY'
+        provider === 'groq' ? 'GROQ_API_KEY' :
+        provider === 'gemini' ? 'GEMINI_API_KEY' :
+        'AIMLAPI_API_KEY'
       } environment variable.`
     );
   }
@@ -129,10 +133,12 @@ export async function getProvidersStatus(userId?: string): Promise<{
   anthropic: { configured: boolean; source: 'user' | 'env' | null };
   openai: { configured: boolean; source: 'user' | 'env' | null };
   groq: { configured: boolean; source: 'user' | 'env' | null };
+  gemini: { configured: boolean; source: 'user' | 'env' | null };
+  aimlapi: { configured: boolean; source: 'user' | 'env' | null };
 }> {
   const status: any = {};
 
-  for (const provider of ['anthropic', 'openai', 'groq'] as const) {
+  for (const provider of ['anthropic', 'openai', 'groq', 'gemini', 'aimlapi'] as const) {
     // Check user key first
     if (userId) {
       try {
@@ -152,10 +158,12 @@ export async function getProvidersStatus(userId?: string): Promise<{
     }
 
     // Check environment variable
-    const envKeyMap = {
+    const envKeyMap: Record<string, string> = {
       anthropic: 'ANTHROPIC_API_KEY',
       openai: 'OPENAI_API_KEY',
       groq: 'GROQ_API_KEY',
+      gemini: 'GEMINI_API_KEY',
+      aimlapi: 'AIMLAPI_API_KEY',
     };
 
     const envKey = envKeyMap[provider];

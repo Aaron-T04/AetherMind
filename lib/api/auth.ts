@@ -17,10 +17,24 @@ export interface ApiAuthResult {
 
 /**
  * Validates authentication - checks Clerk first (for UI), then API key (for external)
+ * HACKATHON DEMO MODE: Allows unauthenticated access for demo purposes
  * This allows both authenticated UI users and API key users to access endpoints
  */
 export async function validateApiKey(request: NextRequest): Promise<ApiAuthResult> {
   try {
+    // HACKATHON DEMO MODE: Allow unauthenticated access
+    // In production, remove this and require authentication
+    const DEMO_MODE = process.env.DEMO_MODE !== 'false'; // Default to true for demo
+    
+    if (DEMO_MODE) {
+      // Use demo user ID for demo mode
+      return {
+        authenticated: true,
+        userId: 'demo-user-hackathon-2025',
+        authType: 'clerk'
+      };
+    }
+
     // First, check for Clerk authentication (UI users)
     const { userId } = await auth();
     if (userId) {

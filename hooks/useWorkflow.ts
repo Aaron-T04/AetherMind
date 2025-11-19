@@ -283,6 +283,14 @@ export function useWorkflow(workflowId?: string) {
 
       if (data.success && data.workflowId) {
         setConvexId(data.workflowId);
+        // Update workflow ID if it changed (shouldn't, but just in case)
+        if (updated.id && updated.id !== workflow.id) {
+          console.log('Workflow ID updated after save:', updated.id);
+        }
+      }
+
+      if (!data.success) {
+        console.error('Save failed:', data.error || data.message);
       }
 
       return data.success;

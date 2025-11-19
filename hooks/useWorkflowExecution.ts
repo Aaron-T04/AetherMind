@@ -107,7 +107,21 @@ export function useWorkflowExecution() {
       });
 
       if (!response.ok) {
-        throw new Error('Workflow execution failed');
+        // Try to get error message from response
+        let errorMessage = 'Workflow execution failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || `HTTP ${response.status}`;
+        }
+        console.error('Workflow execution error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage,
+        });
+        throw new Error(errorMessage);
       }
 
       // Handle SSE stream

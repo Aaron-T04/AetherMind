@@ -61,15 +61,28 @@ export async function executeDataNode(
  * Execute transform using E2B sandbox or fallback to Function constructor
  */
 async function executeTransform(data: any, state: WorkflowState): Promise<any> {
+  console.log('🔄 Transform node executing...');
+  
   // Get the transform script from node data
-  // Support both transformScript (UI) and transformation (templates)
-  const transformScript = data.transformScript || data.transformation;
+  // Support transformScript (UI), transformation (templates), and transformCode (templates)
+  let transformScript = data.transformScript || data.transformation || data.transformCode;
 
   // If no transform script, just pass through the input
   if (!transformScript || transformScript.trim() === '') {
     console.log('⚠️ No transform script provided, passing through input');
     return state.variables.lastOutput || {};
   }
+
+  console.log('📝 Transform script found, length:', transformScript.length);
+  console.log('📥 Input (lastOutput):', typeof state.variables.lastOutput === 'string' 
+    ? state.variables.lastOutput.substring(0, 100) + '...' 
+    : JSON.stringify(state.variables.lastOutput).substring(0, 100) + '...');
+
+  // Replace template variables like {{lastOutput}} and {{input.research_topic}}
+  const { substituteVariables } = await import('../variable-substitution');
+  transformScript = substituteVariables(transformScript, state);
+  
+  console.log('✅ Transform script after variable substitution');
 
   // Try E2B execution first (secure sandbox)
   const useE2B = typeof process !== 'undefined' && process.env?.E2B_API_KEY;
@@ -194,14 +207,27 @@ async function executeTransformFallback(transformScript: string, state: Workflow
 
   try {
     // Create restricted context with deep clones to prevent mutation
-    const sandboxedInput = JSON.parse(JSON.stringify(state.variables.lastOutput || {}));
+    // Handle string inputs correctly - don't wrap strings in JSON.parse/stringify
+    const lastOutputValue = state.variables.lastOutput;
+    let sandboxedInput: any;
+    if (typeof lastOutputValue === 'string') {
+      sandboxedInput = lastOutputValue; // Keep strings as-is
+    } else if (lastOutputValue === null || lastOutputValue === undefined) {
+      sandboxedInput = {};
+    } else {
+      sandboxedInput = JSON.parse(JSON.stringify(lastOutputValue));
+    }
+    
     const sandboxedState = {
       variables: JSON.parse(JSON.stringify(state.variables))
     };
 
     // Debug: Log the state structure
     console.log('🔍 Transform Debug - state.variables.input:', JSON.stringify(state.variables.input, null, 2));
-    console.log('🔍 Transform Debug - input (lastOutput):', JSON.stringify(sandboxedInput, null, 2));
+    console.log('🔍 Transform Debug - input (lastOutput) type:', typeof sandboxedInput);
+    console.log('🔍 Transform Debug - input (lastOutput) preview:', typeof sandboxedInput === 'string' 
+      ? sandboxedInput.substring(0, 100) + '...' 
+      : JSON.stringify(sandboxedInput).substring(0, 100) + '...');
     console.log('🔍 Transform Debug - ALL state.variables keys:', Object.keys(state.variables));
 
     // Use strict mode to prevent certain unsafe operations
@@ -218,6 +244,17 @@ async function executeTransformFallback(transformScript: string, state: Workflow
     );
 
     const result = await Promise.race([executionPromise, timeoutPromise]);
+    
+    // Validate result is an object (not a string)
+    if (typeof result === 'string') {
+      console.warn('⚠️ Transform returned a string instead of an object. Wrapping it.');
+      // If transform returned a string, wrap it in a basic structure
+      return {
+        error: 'Transform returned string instead of JSON object',
+        summary: result,
+        timestamp: new Date().toISOString()
+      };
+    }
 
     // Validate output isn't suspiciously large (1MB limit)
     const resultString = JSON.stringify(result);
@@ -232,7 +269,16 @@ async function executeTransformFallback(transformScript: string, state: Workflow
 
     return result;
   } catch (error) {
-    throw new Error(`Transform failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('❌ Transform execution failed:', error);
+    console.error('❌ Transform script that failed:', transformScript.substring(0, 500));
+    console.error('❌ Error details:', error instanceof Error ? error.stack : error);
+    // Don't throw - instead return the input wrapped in a basic structure
+    console.warn('⚠️ Transform failed, returning input wrapped in basic structure');
+    return {
+      error: 'Transform execution failed',
+      originalOutput: state.variables.lastOutput,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 }
 

@@ -17,6 +17,8 @@ import {
   StopCircle,
   Zap,
   FileText,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Button from "@/components/shared/button/Button";
 
@@ -79,6 +81,7 @@ export default function ExecutionPanel({
   environment,
   pendingAuth,
 }: ExecutionPanelProps) {
+  const [showResearchDetails, setShowResearchDetails] = useState(false);
   
   // Track Google Doc creation for toast notifications
   const [notifiedDocs, setNotifiedDocs] = useState<Set<string>>(new Set());
@@ -701,6 +704,7 @@ export default function ExecutionPanel({
                 </div>
               ) : (
                 <div className="space-y-16">
+                  {/* Show all nodes during execution with nice animations */}
                   {Object.entries(nodeResults).map(([nodeId, result]) => {
                     const node = workflow?.nodes.find(n => n.id === nodeId);
                     const nodeData = node?.data as any;
@@ -1252,32 +1256,186 @@ export default function ExecutionPanel({
                     </motion.div>
                   )}
 
-                  {/* Final Result */}
-                  {execution?.status === 'completed' && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="mt-24 p-20 bg-accent-white rounded-12 border border-border-faint"
-                    >
-                      <div className="flex items-center gap-12 mb-12">
-                        <div className="w-32 h-32 bg-black-alpha-12 rounded-full flex items-center justify-center">
-                          <svg className="w-18 h-18 text-black-alpha-64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                        <h3 className="text-label-large text-accent-black font-medium">Workflow Completed</h3>
-                      </div>
-                      <p className="text-body-small text-black-alpha-64">
-                        All nodes executed successfully
-                      </p>
-                      <button
-                        onClick={handleReset}
-                        className="mt-16 w-full px-16 py-10 bg-accent-black hover:bg-black-alpha-80 text-white rounded-8 text-body-small font-medium transition-colors"
+                  {/* Final Result - Show only JSON output when completed (but keep node animations above) */}
+                  {execution?.status === 'completed' && (() => {
+                    // Find the final output node (transform-json or the last node before end)
+                    const endNode = workflow?.nodes.find(n => n.type === 'end');
+                    const finalOutputNodeId = endNode 
+                      ? workflow?.edges
+                          .filter(e => e.target === endNode.id)
+                          .map(e => e.source)[0] // Get the node that feeds into end
+                      : null;
+                    
+                    const finalOutputNode = finalOutputNodeId 
+                      ? workflow?.nodes.find(n => n.id === finalOutputNodeId)
+                      : null;
+                    
+                    const finalResult = finalOutputNodeId && nodeResults[finalOutputNodeId]
+                      ? nodeResults[finalOutputNodeId]
+                      : null;
+                    
+                    // If no final result found, try to find any transform node output
+                    const transformNode = workflow?.nodes.find(n => 
+                      n.type === 'transform' && nodeResults[n.id]?.output
+                    );
+                    const transformResult = transformNode ? nodeResults[transformNode.id] : null;
+                    
+                    const displayResult = finalResult || transformResult;
+                    const displayNode = finalOutputNode || transformNode;
+                    
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mt-24 p-20 bg-accent-white rounded-12 border border-border-faint"
                       >
-                        Run Again
-                      </button>
-                    </motion.div>
-                  )}
+                        <div className="flex items-center gap-12 mb-16">
+                          <div className="w-32 h-32 bg-aethermind-blue/10 rounded-full flex items-center justify-center">
+                            <svg className="w-18 h-18 text-aethermind-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-label-large text-accent-black font-medium">Workflow Completed</h3>
+                            {displayNode && (
+                              <p className="text-body-small text-black-alpha-64 mt-4">
+                                Final output from: {displayNode.data?.nodeName || displayNode.data?.label || displayNode.id}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Final JSON Output */}
+                        {displayResult?.output && (
+                          <div className="mt-16">
+                            <div className="flex items-center justify-between mb-8">
+                              <p className="text-body-small font-medium text-accent-black">Final Output (JSON):</p>
+                              <div className="flex items-center gap-8">
+                                <button
+                                  onClick={() => setShowResearchDetails(!showResearchDetails)}
+                                  className="flex items-center gap-4 text-body-small text-black-alpha-64 hover:text-accent-black font-medium transition-colors"
+                                >
+                                  {showResearchDetails ? (
+                                    <>
+                                      <EyeOff className="w-14 h-14" />
+                                      Hide Research Details
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Eye className="w-14 h-14" />
+                                      View Research Details
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const jsonStr = typeof displayResult.output === 'string' 
+                                      ? displayResult.output 
+                                      : JSON.stringify(displayResult.output, null, 2);
+                                    navigator.clipboard.writeText(jsonStr);
+                                    toast.success('JSON copied to clipboard');
+                                  }}
+                                  className="text-body-small text-aethermind-blue hover:text-aethermind-blue/80 font-medium"
+                                >
+                                  Copy JSON
+                                </button>
+                              </div>
+                            </div>
+                            <div className="bg-aethermind-dark rounded-8 p-16 border border-border-faint overflow-auto max-h-400">
+                              <pre className="text-body-small text-accent-white font-mono whitespace-pre-wrap break-words">
+                                {typeof displayResult.output === 'string' 
+                                  ? (() => {
+                                      // Try to parse and pretty-print if it's a JSON string
+                                      try {
+                                        const parsed = JSON.parse(displayResult.output);
+                                        return JSON.stringify(parsed, null, 2);
+                                      } catch {
+                                        return displayResult.output;
+                                      }
+                                    })()
+                                  : JSON.stringify(displayResult.output, null, 2)}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Research Details - Expandable */}
+                        {showResearchDetails && execution?.status === 'completed' && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-16 pt-16 border-t border-border-faint"
+                          >
+                            <h4 className="text-body-medium font-medium text-accent-black mb-12">
+                              Research Process Details
+                            </h4>
+                            <p className="text-body-small text-black-alpha-64 mb-16">
+                              View the intermediate steps that generated the final output
+                            </p>
+                            <div className="space-y-12">
+                              {Object.entries(nodeResults)
+                                .filter(([nodeId]) => {
+                                  const node = workflow?.nodes.find(n => n.id === nodeId);
+                                  // Show all nodes except the final transform/end node
+                                  return node && node.type !== 'end' && node.type !== 'start' && 
+                                         (!finalOutputNodeId || nodeId !== finalOutputNodeId) &&
+                                         (!transformNode || nodeId !== transformNode?.id);
+                                })
+                                .map(([nodeId, result]) => {
+                                  const node = workflow?.nodes.find(n => n.id === nodeId);
+                                  const nodeData = node?.data as any;
+                                  const nodeName = nodeData?.nodeName || nodeData?.label || 'Node';
+                                  const nodeType = nodeData?.nodeType || node?.type || 'agent';
+                                  const NodeIcon = getNodeIcon(nodeType);
+                                  
+                                  return (
+                                    <div
+                                      key={nodeId}
+                                      className="bg-background-base rounded-8 p-12 border border-border-faint"
+                                    >
+                                      <div className="flex items-center gap-8 mb-8">
+                                        <NodeIcon className="w-16 h-16" style={{ color: getNodeColor(nodeType) }} />
+                                        <h5 className="text-body-small font-medium text-accent-black">
+                                          {nodeName}
+                                        </h5>
+                                        <span className="text-body-small text-black-alpha-48 ml-auto">
+                                          {result.status}
+                                        </span>
+                                      </div>
+                                      {result.output && (
+                                        <div className="mt-8">
+                                          <div className="bg-accent-white rounded-6 p-10 border border-border-faint overflow-auto max-h-200">
+                                            <pre className="text-body-small text-accent-black whitespace-pre-wrap break-words">
+                                              {typeof result.output === 'string'
+                                                ? result.output.substring(0, 500) + (result.output.length > 500 ? '...' : '')
+                                                : JSON.stringify(result.output, null, 2).substring(0, 500) + '...'}
+                                            </pre>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </motion.div>
+                        )}
+                        
+                        {!displayResult?.output && (
+                          <p className="text-body-small text-black-alpha-64 mt-12">
+                            All nodes executed successfully
+                          </p>
+                        )}
+                        
+                        <button
+                          onClick={handleReset}
+                          className="mt-16 w-full px-16 py-10 bg-aethermind-blue hover:bg-aethermind-blue/90 text-white rounded-8 text-body-small font-medium transition-colors"
+                        >
+                          Run Again
+                        </button>
+                      </motion.div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

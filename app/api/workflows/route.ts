@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       workflowId: savedId,
+      customId: customId, // Return customId so frontend can use it
       source: 'convex',
       message: 'Workflow saved successfully',
     });
