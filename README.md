@@ -258,9 +258,8 @@ Add custom MCP servers in Settings → MCP Registry:
 
 ## 📚 Documentation
 
-- [Project Overview](PROJECT_OVERVIEW.md) – Technical architecture
-- [Hackathon Status](HACKATHON_STATUS.md) – Implementation progress
-- [Making It Yours](MAKING_IT_YOURS.md) – Customization guide
+- [Hackathon README](README_HACKATHON.md) – Detailed hackathon setup and demo guide
+- [Template Outputs](TEMPLATE_OUTPUTS.md) – Expected outputs for each workflow template
 
 ---
 

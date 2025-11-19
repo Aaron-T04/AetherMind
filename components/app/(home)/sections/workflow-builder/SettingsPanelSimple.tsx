@@ -873,11 +873,13 @@ function MCPCard({
               <div>
                 <p className="text-xs text-black-alpha-48 mb-4">Available Tools ({server.tools.length})</p>
                 <div className="flex flex-wrap gap-4">
-                  {server.tools.map((tool) => (
-                    <span key={tool} className="px-8 py-4 bg-black-alpha-4 text-xs text-accent-black rounded-4">
-                      {tool}
-                    </span>
-                  ))}
+                  {server.tools
+                    .filter((tool) => tool && tool.trim()) // Filter out empty/whitespace tools
+                    .map((tool, index) => (
+                      <span key={`${server._id}-tool-${index}-${tool}`} className="px-8 py-4 bg-black-alpha-4 text-xs text-accent-black rounded-4">
+                        {tool}
+                      </span>
+                    ))}
                 </div>
               </div>
             )}
@@ -1121,11 +1123,13 @@ function AddMCPModal({ isOpen, onClose, onSave, editingServer }: AddMCPModalProp
               </label>
               <div className="p-12 bg-heat-4 rounded-8 border border-heat-100">
                 <div className="flex flex-wrap gap-4">
-                  {discoveredTools.map((tool) => (
-                    <span key={tool} className="px-6 py-2 bg-white text-heat-100 rounded-4 text-xs font-medium border border-heat-100">
-                      {tool}
-                    </span>
-                  ))}
+                  {discoveredTools
+                    .filter((tool) => tool && tool.trim()) // Filter out empty/whitespace tools
+                    .map((tool, index) => (
+                      <span key={`discovered-tool-${index}-${tool}`} className="px-6 py-2 bg-white text-heat-100 rounded-4 text-xs font-medium border border-heat-100">
+                        {tool}
+                      </span>
+                    ))}
                 </div>
               </div>
             </div>
